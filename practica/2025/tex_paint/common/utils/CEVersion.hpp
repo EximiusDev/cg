@@ -1,0 +1,6 @@
+#ifndef CE_VERSION_HPP
+#define CE_VERSION_HPP
+
+#define CHOOKITY_ENGINE_VERSION 20250310
+
+#endif
