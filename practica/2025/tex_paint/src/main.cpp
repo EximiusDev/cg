@@ -86,6 +86,11 @@ int main() {
 	shader_main = Shader("shaders/main");
 	
 	image = Image("models/chookity.png",true);
+	
+	// CUSTOM
+	image_colormap = Image("models/chookity.png",true);
+	makeColorMap();
+
 	texture = Texture(image);
 	
 	model_chookity = Model::loadSingle("models/chookity", Model::fNoTextures);
@@ -242,34 +247,43 @@ void mainMouseButtonCallback(GLFWwindow* window, int button, int action, int mod
 			common_callbacks::mouseButtonCallback(window, GLFW_MOUSE_BUTTON_LEFT, action, mods);
 			return;
 		}
-		
-		mouse_action = MouseAction::Draw;
+
+		if (button==GLFW_MOUSE_BUTTON_LEFT) {
+			mouse_action = MouseAction::Draw;
+
+			drawBack();
+			glFinish();
+			
+			double wx,wy;
+			glfwGetCursorPos(window,&wx,&wy);
+
+			int  wwidth, wheight;
+    		glfwGetWindowSize(window,&wwidth, &wheight);
+
+			int px = (int)(wx);
+			int py = (int)(wheight - wy);
+
+			p0_2d = glm::vec2(px,py);
+			
+			float zbf ;
+			glReadBuffer(GL_DEPTH);
+			glReadPixels(px,py,1,1,GL_DEPTH_COMPONENT,GL_FLOAT,&zbf);
+
+			std::cout << "P: " << px << ", " << py << std::endl;			
+			std::cout << "Z_VALUE: " << zbf << std::endl;
+			
+			if(zbf < 1.f) // Si no es el Z_FAR
+			{	
+				std::cout<<"puto el que lee" << std::endl;
+				
+				texture.update(image_colormap);
+			}
+		}
 		
 		/// @ToDo: Parte 2: pintar un punto de radio "radius" en la imagen
 		///                 "image" que se usa como textura
 
-		// Get Cursor pos
-		double x,y;
-		glfwGetCursorPos(window,&x,&y);
-
-		// Get cursor z buffer value
-		glReadBuffer(GL_DEPTH);
-		float depth_value;
-		glReadPixels(x,y,1,1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_value);
-
-		if(depth_value < 1)
-		{
-			makeColorMap();
-
-			// Get cursor color
-			glReadBuffer(GL_BACK);
-			glm::vec4 color_rgba;
-			glReadPixels(x,y,1,1, GL_RGBA, GL_FLOAT, &(color_rgba[0]));
-
-			glm::vec3 color_rgb = glm::vec3(color_rgba.x,color_rgba.y,color_rgba.z);
-			auto p_img = colorToImage[color_rgb];
-			drawCircle(radius,p_img);
-		}
+		
 	} else {
 		if (mouse_action==MouseAction::ManipulateView)
 			common_callbacks::mouseButtonCallback(window, GLFW_MOUSE_BUTTON_LEFT, action, mods);
@@ -287,6 +301,9 @@ void mainMouseMoveCallback(GLFWwindow* window, double xpos, double ypos) {
 	/// @ToDo: Parte 2: pintar un segmento de ancho "2*radius" en la imagen
 	///                 "image" que se usa como textura
 	
+
+
+
 }
 
 void dda(glm::vec2 p_0,glm::vec2 p_1,std::string type)
@@ -356,7 +373,6 @@ void getColorCoordinates(GLFWwindow* window_2d,glm::vec2 p)
 
 void makeColorMap()
 {
-	image_colormap = Image("models/chookity.png",true);
 	for (int i = 0; i < image.GetHeight(); i++)
 	{
 		for (int j = 0; j < image.GetWidth() ; j++)
