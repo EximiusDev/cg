@@ -50,6 +50,8 @@ void drawCircle(int radius,glm::vec2 point);
 void dda(glm::vec2 p_0,glm::vec2 p_1,std::string type="line");
 void blendPixel(int y, int x);
 void makeColorMap();
+void printColorToImage();
+void printImageToColor();
 
 // Comparadores para usar glm::vec como clave en std::map
 namespace glm {
@@ -161,6 +163,10 @@ void drawBack() {
 
 	glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+	glDisable(GL_MULTISAMPLE); // evita promediar subpixeles
+	glDisable(GL_BLEND);       // evita combinar colores con transparencia
+	glDisable(GL_DITHER);      // evita correcciones de dithering
 	
 	texture.bind();
 	shader_flat.use();
@@ -293,18 +299,31 @@ void mainMouseButtonCallback(GLFWwindow* window, int button, int action, int mod
 			if(zbf < 1.f) // Si no es el Z_FAR
 			{	
 				std::cout << "zbf function triggered" << std::endl;
-				
+
 				// Leemos el color del pixel
 				glReadBuffer(GL_BACK);
-				glm::vec3 color_value;
-				glReadPixels(px,py,1,1,GL_RGB,GL_FLOAT,&(color_value[0]));
-				
-				std::cout 	<< "READ COLOR: " 
-							<< (int)(color_value.x * 255.f) << ", " 
-							<< (int)(color_value.y * 255.f) << ", " 
-							<< (int)(color_value.x * 255.f) << std::endl;
+				unsigned char color_value[3];
+				glReadPixels(px, py, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, color_value);
 
-				auto p0_tex = colorToImage[color_value];
+				glm::vec3 color_rgb(
+				    (int)color_value[0],
+				    (int)color_value[1],
+				    (int)color_value[2]
+				);
+
+				//printColorToImage();
+
+				std::cout << "READ COLOR: "
+				          << (int)color_rgb.x << ", "
+				          << (int)color_rgb.y << ", "
+				          << (int)color_rgb.z << std::endl;
+
+				auto p0_tex = colorToImage[color_rgb];
+
+				std::cout << "POS: "
+				          << (int)p0_tex.x << ", "
+				          << (int)p0_tex.y << std::endl;
+
 				drawCircle(radius,p0_tex);
 
 				texture.update(image);
@@ -413,35 +432,38 @@ void makeColorMap() {
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
+			
+
             // crear color actual
             glm::vec3 color_rgb = glm::vec3(
-                r / 255.0f,
-                g / 255.0f,
-                b / 255.0f
+                (int)r,
+                (int)g,
+                (int)b
             );
 
-            glm::vec2 pos = glm::vec2((float)x,(float)(height - y));
+            glm::vec2 pos = glm::vec2((float)x,(float)(y));
 
             colorToImage[color_rgb] = pos;
             imageToColor[pos] = color_rgb;
 
 
-            image_colormap.SetRGB(y, x, color_rgb);
+            image_colormap.SetRGB(y, x,glm::vec3((r / 255.0f),(g / 255.0f),(b / 255.0f)));
 			// image_colormap.SetRGB(y, x, glm::vec3(0,0,0));
 
             // avanzar el “contador” de color
-            b++;
+            b+=2;
             if (b >= 256) {
                 b = 0;
-                g++;
+                g+=2;
                 if (g >= 256) {
                     g = 0;
-                    r++;
+                    r+=2;
                     if (r >= 256) r = 0;
                 }
             }
         }
     }
+	std::cout << "color: " << r << ", " << g << ", " << b << std::endl;
 }
 
 void blendPixel(int y, int x) {
@@ -455,3 +477,27 @@ void blendPixel(int y, int x) {
         image.SetRGB(y,x, out);
     };
 
+
+void printColorToImage() {
+    std::cout << "colorToImage:" << std::endl;
+    for (const auto& pair : colorToImage) {
+        const glm::vec3& color = pair.first;
+        const glm::vec2& pos = pair.second;
+        std::cout << "Color (" 
+                  << color.x << ", " << color.y << ", " << color.z << ")"
+                  << " -> Pos (" 
+                  << pos.x << ", " << pos.y << ")" << std::endl;
+    }
+}
+
+void printImageToColor() {
+    std::cout << "imageToColor:" << std::endl;
+    for (const auto& pair : imageToColor) {
+        const glm::vec2& pos = pair.first;
+        const glm::vec3& color = pair.second;
+        std::cout << "Pos (" 
+                  << pos.x << ", " << pos.y << ")"
+                  << " -> Color (" 
+                  << color.x << ", " << color.y << ", " << color.z << ")" << std::endl;
+    }
+}
