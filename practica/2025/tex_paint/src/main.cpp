@@ -173,6 +173,8 @@ void drawBack() {
 	setMatrixes(main_window, shader_flat);
 	shader_flat.setLight(glm::vec4{-1.f,1.f,4.f,1.f}, glm::vec3{1.f,1.f,1.f}, 0.35f);
 	shader_flat.setMaterial(model_chookity.material);
+	// Pass texture size so the shader can encode pixel coordinates into color
+	shader_flat.setUniform("texSize", glm::vec2((float)image.GetWidth(), (float)image.GetHeight()));
 	shader_flat.setBuffers(model_chookity.buffers);
 	model_chookity.buffers.draw();
 
@@ -305,27 +307,23 @@ void mainMouseButtonCallback(GLFWwindow* window, int button, int action, int mod
 				unsigned char color_value[3];
 				glReadPixels(px, py, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, color_value);
 
-				glm::vec3 color_rgb(
-				    (int)color_value[0],
-				    (int)color_value[1],
-				    (int)color_value[2]
-				);
+				// Decode the packed 24-bit index from the read-back RGB
+				int r = (int)color_value[0];
+				int g = (int)color_value[1];
+				int b = (int)color_value[2];
 
-				//printColorToImage();
+				int idx = (r << 16) | (g << 8) | b;
+				int texW = image.GetWidth();
+				int texH = image.GetHeight();
+				int px_tex = idx % texW;
+				int py_tex = idx / texW;
 
-				std::cout << "READ COLOR: "
-				          << (int)color_rgb.x << ", "
-				          << (int)color_rgb.y << ", "
-				          << (int)color_rgb.z << std::endl;
+				glm::vec2 p0_tex = glm::vec2((float)px_tex, (float)py_tex);
 
-				auto p0_tex = colorToImage[color_rgb];
+				std::cout << "READ COLOR (packed idx): " << idx << " -> POS: "
+						  << px_tex << ", " << py_tex << std::endl;
 
-				std::cout << "POS: "
-				          << (int)p0_tex.x << ", "
-				          << (int)p0_tex.y << std::endl;
-
-				drawCircle(radius,p0_tex);
-
+				drawCircle(radius, p0_tex);
 				texture.update(image);
 			}
 		}
@@ -482,7 +480,7 @@ void blendPixel(int y, int x) {
         glm::vec3 src = glm::vec3(color.x, color.y, color.z);
         glm::vec3 dst = current_color;
 		
-		alpha = alpha*2/radius; // para que el alpha en radios grandes ande 
+		alpha = alpha/(radius/5); // para que el alpha en radios grandes ande 
 		
         glm::vec3 out = alpha * src + (1.0f - alpha) * dst;
         image.SetRGB(y,x, out);
