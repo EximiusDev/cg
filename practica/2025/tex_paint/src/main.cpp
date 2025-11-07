@@ -69,7 +69,7 @@ namespace glm {
 
 
 
-// callbacks del mouse y auxiliares para los callbacks
+// callbacks del mouse y auxiliares para los callbacks 
 enum class MouseAction { None, ManipulateView, Draw };
 MouseAction mouse_action = MouseAction::None; // qu� hacer en el callback del motion si el bot�n del mouse est� apretado
 void mainMouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
